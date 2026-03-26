@@ -1,0 +1,40 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>نظام الطاقة الذكي</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="card">
+        <h2>نظام توقعات الطاقة المتجددة ☀️🌬️</h2>
+        <form method="POST">
+            <input type="text" name="lat" placeholder="خط العرض (Latitude)" value="23.085" required>
+            <input type="text" name="lon" placeholder="خط الطول (Longitude)" value="57.350" required>
+            <br>
+            <label>
+                <input type="checkbox" name="ac_status"> هل المكيف يعمل؟
+            </label>
+            <br>
+            <button type="submit">حساب الطاقة المتوقعة</button>
+        </form>
+
+        {% if results %}
+        <div class="result-box">
+            <h3>النتائج لمنطقة: {{ results.weather.city }}</h3>
+            <p>الحرارة: {{ results.weather.temp }}°C | الغيوم: {{ results.weather.clouds }}%</p>
+            <p>حالة المكيف: <b>{{ results.ac_status }}</b></p>
+            <hr>
+            <h4>الطاقة المتوقعة (أمبير):</h4>
+            <p>الخلايا الشمسية: <b>{{ results.solar }} A</b></p>
+            <p>توربين الرياح: <b>{{ results.wind }} A</b></p>
+            <h2 style="color: #007bff;">الإجمالي: {{ results.total }} A</h2>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
+
+
+
