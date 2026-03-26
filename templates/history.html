@@ -1,0 +1,40 @@
+
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <title>سجل البيانات</title>
+</head>
+<body>
+    <div class="container">
+        <h2>📊 سجل بيانات الطاقة المجمعة</h2>
+        <table border="1" style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #eee;">
+                    <th>التاريخ</th>
+                    <th>المدينة</th>
+                    <th>شمس (A)</th>
+                    <th>رياح (A)</th>
+                    <th>الإجمالي</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                <tr>
+                    <td>{{ record.timestamp.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ record.city }}</td>
+                    <td>{{ record.solar_pred }}</td>
+                    <td>{{ record.wind_pred }}</td>
+                    <td>{{ record.total_power }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <br>
+        <a href="/">العودة للرئيسية</a> | <a href="/download">تحميل ملف CSV</a>
+    </div>
+</body>
+</html>
+
