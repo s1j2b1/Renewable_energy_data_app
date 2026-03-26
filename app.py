@@ -129,8 +129,14 @@ def index():
                 "total": total,
                 "ac_status": "شغال" if ac_on else "مطفأ"
             }
-            
     return render_template('index.html', results=results) # عرض صفحة index.html
+
+@app.route('/history')
+def history():
+    # جلب كل السجلات من قاعدة البيانات وترتيبها من الأحدث للأقدم
+    all_records = EnergyRecord.query.order_by(EnergyRecord.timestamp.desc()).all()
+    return render_template('history.html', records=all_records)
+            
 
 
 # --- 8. تشغيل التطبيق ---
