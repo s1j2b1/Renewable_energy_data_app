@@ -33,6 +33,28 @@
         </div>
         {% endif %}
     </div>
+
+    <!-- ازرار رؤية البينانات و تحميلها -->
+    <hr>
+    <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin-top: 20px;">
+        <h4>قسم الإدارة (للمصرح لهم فقط) 🔐</h4>
+        <input type="password" id="admin_pwd" placeholder="أدخل كلمة المرور">
+        <br><br>
+        <button onclick="viewHistory()" style="background: #007bff; width: auto;">رؤية سجل البيانات</button>
+        <button onclick="downloadData()" style="background: #6c757d; width: auto;">تحميل ملف CSV</button>
+    </div>
+
+    <script>
+        function viewHistory() {
+            var pwd = document.getElementById('admin_pwd').value;
+            window.location.href = '/history?password=' + pwd;
+        }
+        function downloadData() {
+            var pwd = document.getElementById('admin_pwd').value;
+            window.location.href = '/download?password=' + pwd;
+        }
+    </script>
+
 </body>
 </html>
 
