@@ -1,182 +1,129 @@
-
-""" كود الـ Flask المطور (مع SQLite)
-سنستخدم مكتبة Flask-SQLAlchemy لأنها تجعل التعامل مع قاعدة البيانات سهلاً جداً وتسمح لك بالانتقال من SQLite إلى PostgreSQL بضغطة زر
-"""
-
-
-# --- 1. استيراد المكتبات (الأدوات التي سنستخدمها) ---
-import os # مكتبة للتعامل مع نظام التشغيل (مثل قراءة روابط قواعد البيانات)
+import os
 import csv
 import io
-
- # مكتبة فلاسك لبناء موقع الويب
+import requests  # ضروري لجلب بيانات الطقس
 from flask import Flask, render_template, request, Response, redirect, url_for
-from flask_sqlalchemy import SQLAlchemy # مكتبة للتعامل مع قاعدة البيانات بسهولة
-from datetime import datetime # مكتبة للتعامل مع الوقت والتاريخ
-import requests # مكتبة لإرسال طلبات للإنترنت (مثل جلب الطقس)
-
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
 from dotenv import load_dotenv
-# .env تحميل المفتاح من ملف  
+
+# تحميل المفاتيح من ملف .env (إذا وجد)
 load_dotenv()
 
+app = Flask(__name__)
 
-# --- 2. إعداد تطبيق فلاسك ---
-app = Flask(__name__) # إنشاء نسخة من تطبيق فلاسك
-
-# --- 3. إعداد قاعدة البيانات (المخزن) ---
-# السطر القادم يحدد مكان تخزين البيانات
-# إذا كان التطبيق على الإنترنت (Render) سيستخدم PostgreSQL
-# إذا كان على جهازك الشخصي سيقوم بإنشاء ملف صغير اسمه energy_data.db
+# --- إعدادات قاعدة البيانات ---
 base_dir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(base_dir, 'energy_data.db'))
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False # إيقاف ميزة إضافية لا نحتاجها لتوفير الذاكرة
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-db = SQLAlchemy(app) # ربط قاعدة البيانات بتطبيق فلاسك
+db = SQLAlchemy(app)
 
-# --- إعداد كلمة المرور ---
-# يمكنك تغيير '1234' إلى أي كلمة مرور تريدها
+# كلمة المرور للإدارة (يمكنك تغييرها)
 ADMIN_PASSWORD = "my_secret_password" 
 
-# --- 4. تصميم "الجدول" داخل قاعدة البيانات ---
-# هنا نحدد ما هي المعلومات التي نريد حفظها للأبد
+# --- تصميم جدول البيانات ---
 class EnergyRecord(db.Model):
-    id = db.Column(db.Integer, primary_key=True) # رقم تسلسلي تلقائي لكل عملية (1, 2, 3...)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow) # وقت وتاريخ الحساب
-    city = db.Column(db.String(100)) # اسم المدينة
-    lat = db.Column(db.Float) # خط العرض
-    lon = db.Column(db.Float) # خط الطول
-    temp = db.Column(db.Float) # درجة الحرارة التي جلبناها
-    wind_speed = db.Column(db.Float) # سرعة الرياح
-    clouds = db.Column(db.Float) # نسبة الغيوم
-    solar_pred = db.Column(db.Float) # مقدار الطاقة الشمسية المتوقع
-    wind_pred = db.Column(db.Float) # مقدار طاقة الرياح المتوقع
-    total_power = db.Column(db.Float) # المجموع الكلي للطاقة
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    city = db.Column(db.String(100))
+    lat = db.Column(db.Float)
+    lon = db.Column(db.Float)
+    temp = db.Column(db.Float)
+    wind_speed = db.Column(db.Float)
+    clouds = db.Column(db.Float)
+    solar_pred = db.Column(db.Float)
+    wind_pred = db.Column(db.Float)
+    total_power = db.Column(db.Float)
 
-# أمر لإنشاء ملف قاعدة البيانات فور تشغيل الكود لأول مرة
+# إنشاء الجداول
 with app.app_context():
     db.create_all()
 
-# --- 5. إعدادات جلب البيانات من الإنترنت ---
-# هنا بايثون سيبحث عن المتغير في إعدادات Render (Environment Variables)
-# وإذا لم يجده، سيعطي قيمة "None" ولن يظهر مفتاحك الحقيقي في الكود
-MY_API_KEY = os.environ.get('WEATHER_API_KEY')  # مفتاحك الخاص لموقع OpenWeatherMap
+# جلب مفتاح الطقس من إعدادات Render
+MY_API_KEY = os.environ.get('WEATHER_API_KEY')
 
+# --- دالة جلب الطقس ---
 def get_weather_data(lat, lon, api_key):
-    """دالة تذهب للإنترنت وتجلب حالة الطقس الحالية للإحداثيات المعطاة"""
     url = f"http://api.openweathermap.org/data/2.5/forecast?lat={lat}&lon={lon}&appid={api_key}&units=metric&lang=ar"
     try:
-        response = requests.get(url) # إرسال الطلب للموقع
-        data = response.json() # تحويل الرد إلى شكل يمكن لبايثون فهمه (قاموس)
-        if data.get("cod") == "200": # إذا كان الاتصال ناجحاً
-            forecast = data['list'][0] # خذ أول توقع متاح الآن
+        response = requests.get(url)
+        data = response.json()
+        if data.get("cod") == "200":
+            forecast = data['list'][0]
             return {
                 "city": data['city']['name'],
                 "temp": forecast['main']['temp'],
                 "wind_speed": forecast['wind']['speed'],
                 "clouds": forecast['clouds']['all']
             }
-    except Exception as e:
-        print(f"خطأ في الاتصال: {e}")
-    return None
+    except:
+        return None
 
-# --- 6. دالة التوقع (الذكاء الاصطناعي البسيط) ---
+# --- دالة الحساب ---
 def predict_power(temp, wind_speed_api, cloud_pct, ac_status):
-    """دالة تحسب كمية الطاقة بناءً على الأرقام التي شرحناها سابقاً"""
-    
-    # حساب الطاقة الشمسية
-    solar_base = 1.0 # نفترض أن أقصى إنتاج للوح هو 1 أمبير
-    cloud_factor = (100 - (cloud_pct * 0.8)) / 100 # الغيوم تقلل الإنتاج لكن لا تنهيه
-    temp_factor = 1.0 if temp < 40 else 0.8 # إذا كانت الحرارة فوق 40، الكفاءة تقل
+    solar_base = 1.0
+    cloud_factor = (100 - (cloud_pct * 0.8)) / 100
+    temp_factor = 1.0 if temp < 40 else 0.8
     predicted_solar = round(solar_base * cloud_factor * temp_factor, 3)
 
-    # حساب طاقة الرياح
-    wind_base = 1.6 # أقصى إنتاج للتوربين هو 1.6 أمبير
-    if ac_status: # إذا كان المستخدم مشغل المكيف (رياح صناعية)
+    wind_base = 1.6
+    if ac_status:
         predicted_wind = wind_base * 0.7 if wind_speed_api > 15 else wind_base * 1.0
-    else: # إذا كان يعتمد على رياح الطبيعة فقط
+    else:
         predicted_wind = (wind_speed_api / 20) * wind_base
     
     predicted_wind = round(predicted_wind, 3)
     total_power = round(predicted_solar + predicted_wind, 3)
-    
     return total_power, predicted_solar, predicted_wind
 
-# --- 7. مسارات الموقع (الصفحات التي يراها المستخدم) ---
+# --- المسارات (Routes) ---
 
-@app.route('/', methods=['GET', 'POST']) # الصفحة الرئيسية للموقع
+@app.route('/', methods=['GET', 'POST'])
 def index():
     results = None
-    if request.method == 'POST': # إذا قام المستخدم بضغط زر "حساب"
-        # 1. قراءة البيانات التي أدخلها المستخدم في المربعات
+    if request.method == 'POST':
         lat = request.form.get('lat')
         lon = request.form.get('lon')
-        ac_on = 'ac_status' in request.form # تفقد هل علامة "المكيف" مفعلة
-        
-        # 2. استدعاء دالة الطقس
+        ac_on = 'ac_status' in request.form
         weather = get_weather_data(lat, lon, MY_API_KEY)
-        
         if weather:
-            # 3. حساب الطاقة المتوقعة بناءً على الطقس
             total, solar, wind = predict_power(weather['temp'], weather['wind_speed'], weather['clouds'], ac_on)
-            
-            # 4. حفظ هذه العملية في "المخزن" (قاعدة البيانات)
             new_record = EnergyRecord(
                 city=weather['city'], lat=float(lat), lon=float(lon),
                 temp=weather['temp'], wind_speed=weather['wind_speed'],
                 clouds=weather['clouds'], solar_pred=solar, 
                 wind_pred=wind, total_power=total
             )
-            db.session.add(new_record) # إضافة السجل
-            db.session.commit() # تأكيد الحفظ نهائياً
-            
-            # تجهيز النتائج لعرضها في الصفحة
-            results = {
-                "weather": weather,
-                "solar": solar,
-                "wind": wind,
-                "total": total,
-                "ac_status": "شغال" if ac_on else "مطفأ"
-            }
-    return render_template('index.html', results=results) # عرض صفحة index.html
+            db.session.add(new_record)
+            db.session.commit()
+            results = {"weather": weather, "solar": solar, "wind": wind, "total": total, "ac_status": "شغال" if ac_on else "مطفأ"}
+    return render_template('index.html', results=results)
 
 @app.route('/history')
 def history():
-    # جلب كل السجلات من قاعدة البيانات وترتيبها من الأحدث للأقدم
-    all_records = EnergyRecord.query.order_by(EnergyRecord.timestamp.desc()).all()
-    return render_template('history.html', records=all_records)
-
-
-# مسار عرض السجل (محمي بكلمة مرور)
-@app.route('/history')
-def history():
-    pwd = request.args.get('password') # نأخذ كلمة المرور من الرابط
+    pwd = request.args.get('password')
     if pwd != ADMIN_PASSWORD:
-        return "<h3>خطأ: كلمة المرور غير صحيحة. هذا القسم للمصرح لهم فقط.</h3>", 403
+        return "<h3>خطأ: كلمة المرور غير صحيحة.</h3>", 403
     
     records = EnergyRecord.query.order_by(EnergyRecord.timestamp.desc()).all()
     return render_template('history.html', records=records)
 
-# مسار تحميل CSV (محمي بكلمة مرور)
 @app.route('/download')
 def download_csv():
     pwd = request.args.get('password')
     if pwd != ADMIN_PASSWORD:
-        return "غير مسموح بالوصول", 403
+        return "خطأ في الصلاحية", 403
     
     records = EnergyRecord.query.all()
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['ID', 'City', 'Temp', 'Wind', 'Clouds', 'Solar_A', 'Wind_A', 'Total_A'])
+    writer.writerow(['ID', 'City', 'Solar', 'Wind', 'Total'])
     for r in records:
-        writer.writerow([r.id, r.city, r.temp, r.wind_speed, r.clouds, r.solar_pred, r.wind_pred, r.total_power])
+        writer.writerow([r.id, r.city, r.solar_pred, r.wind_pred, r.total_power])
     
     output.seek(0)
-    return Response(output, mimetype="text/csv", headers={"Content-disposition": "attachment; filename=energy_data.csv"})
-            
+    return Response(output, mimetype="text/csv", headers={"Content-disposition": "attachment; filename=data.csv"})
 
-
-# --- 8. تشغيل التطبيق ---
 if __name__ == '__main__':
-    app.run(debug=True) # تشغيل الموقع في وضع التطوير (Debug) لسهولة اكتشاف الأخطاء
-
-
+    app.run(debug=True)
