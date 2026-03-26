@@ -60,3 +60,19 @@ button:hover { background-color: #219150; }
     display: inline-block;
     margin: 10px 0;
 }
+
+.admin-section {
+    margin-top: 30px;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border: 1px dashed #ccc;
+    border-radius: 10px;
+}
+
+#admin_pwd {
+    width: 60%;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}
+
