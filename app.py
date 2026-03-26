@@ -11,7 +11,6 @@ import io
 
  # مكتبة فلاسك لبناء موقع الويب
 from flask import Flask, render_template, request, Response, redirect, url_for
-from flask import Flask, render_template, request # مكتبة فلاسك لبناء موقع الويب
 from flask_sqlalchemy import SQLAlchemy # مكتبة للتعامل مع قاعدة البيانات بسهولة
 from datetime import datetime # مكتبة للتعامل مع الوقت والتاريخ
 import requests # مكتبة لإرسال طلبات للإنترنت (مثل جلب الطقس)
