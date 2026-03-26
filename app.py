@@ -6,6 +6,11 @@
 
 # --- 1. استيراد المكتبات (الأدوات التي سنستخدمها) ---
 import os # مكتبة للتعامل مع نظام التشغيل (مثل قراءة روابط قواعد البيانات)
+import csv
+import io
+
+ # مكتبة فلاسك لبناء موقع الويب
+from flask import Flask, render_template, request, Response, redirect, url_for
 from flask import Flask, render_template, request # مكتبة فلاسك لبناء موقع الويب
 from flask_sqlalchemy import SQLAlchemy # مكتبة للتعامل مع قاعدة البيانات بسهولة
 from datetime import datetime # مكتبة للتعامل مع الوقت والتاريخ
@@ -28,6 +33,10 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:/
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False # إيقاف ميزة إضافية لا نحتاجها لتوفير الذاكرة
 
 db = SQLAlchemy(app) # ربط قاعدة البيانات بتطبيق فلاسك
+
+# --- إعداد كلمة المرور ---
+# يمكنك تغيير '1234' إلى أي كلمة مرور تريدها
+ADMIN_PASSWORD = "my_secret_password" 
 
 # --- 4. تصميم "الجدول" داخل قاعدة البيانات ---
 # هنا نحدد ما هي المعلومات التي نريد حفظها للأبد
@@ -136,6 +145,34 @@ def history():
     # جلب كل السجلات من قاعدة البيانات وترتيبها من الأحدث للأقدم
     all_records = EnergyRecord.query.order_by(EnergyRecord.timestamp.desc()).all()
     return render_template('history.html', records=all_records)
+
+
+# مسار عرض السجل (محمي بكلمة مرور)
+@app.route('/history')
+def history():
+    pwd = request.args.get('password') # نأخذ كلمة المرور من الرابط
+    if pwd != ADMIN_PASSWORD:
+        return "<h3>خطأ: كلمة المرور غير صحيحة. هذا القسم للمصرح لهم فقط.</h3>", 403
+    
+    records = EnergyRecord.query.order_by(EnergyRecord.timestamp.desc()).all()
+    return render_template('history.html', records=records)
+
+# مسار تحميل CSV (محمي بكلمة مرور)
+@app.route('/download')
+def download_csv():
+    pwd = request.args.get('password')
+    if pwd != ADMIN_PASSWORD:
+        return "غير مسموح بالوصول", 403
+    
+    records = EnergyRecord.query.all()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['ID', 'City', 'Temp', 'Wind', 'Clouds', 'Solar_A', 'Wind_A', 'Total_A'])
+    for r in records:
+        writer.writerow([r.id, r.city, r.temp, r.wind_speed, r.clouds, r.solar_pred, r.wind_pred, r.total_power])
+    
+    output.seek(0)
+    return Response(output, mimetype="text/csv", headers={"Content-disposition": "attachment; filename=energy_data.csv"})
             
 
 
