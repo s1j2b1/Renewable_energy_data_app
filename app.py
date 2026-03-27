@@ -20,7 +20,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 # كلمة المرور للإدارة (يمكنك تغييرها)
-ADMIN_PASSWORD = "my_secret_password" 
+ADMIN_PASSWORD = "123" 
 
 # --- تصميم جدول البيانات ---
 class EnergyRecord(db.Model):
