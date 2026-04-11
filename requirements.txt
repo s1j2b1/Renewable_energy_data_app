@@ -10,5 +10,7 @@ csv
 python-dotenv
 dotenv
 
+os
+io
 arabic_reshaper
 bidi
