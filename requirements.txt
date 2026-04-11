@@ -4,5 +4,11 @@ flask-sqlalchemy
 requests
 psycopg2-binary
 gunicorn
+datetime
+flask_sqlalchemy
+csv
 python-dotenv
 dotenv
+
+arabic_reshaper
+bidi
