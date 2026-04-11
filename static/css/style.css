@@ -76,3 +76,49 @@ button:hover { background-color: #219150; }
     border: 1px solid #ddd;
 }
 
+
+/* تصميم القائمة الجانبية */
+.sidebar {
+    height: 100%;
+    width: 0; /* مخفية في البداية */
+    position: fixed;
+    z-index: 1000;
+    top: 0;
+    right: 0; /* تظهر من جهة اليمين */
+    background-color: #1a1a1a;
+    overflow-x: hidden;
+    transition: 0.5s; /* سرعة الحركة */
+    padding-top: 60px;
+    color: white;
+    box-shadow: -2px 0 5px rgba(0,0,0,0.5);
+}
+
+.setting-group { padding: 15px; border-bottom: 1px solid #333; }
+.setting-group label { display: block; margin: 10px 0 5px; font-size: 0.9em; color: #bbb; }
+.setting-group input { width: 90%; padding: 8px; background: #333; border: 1px solid #444; color: white; border-radius: 4px; }
+
+.save-btn {
+    width: 90%;
+    margin: 20px 5%;
+    padding: 12px;
+    background-color: #27ae60;
+    border: none;
+    color: white;
+    cursor: pointer;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+.open-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 10px 15px;
+    background: #34495e;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    z-index: 999;
+}
+
